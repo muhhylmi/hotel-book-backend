@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String @id @default(cuid())
+  email    String @unique
+  password String
+  name     String
+  role     Role   @default(USER)
+  
+  bookings Booking[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("users")
+}
+
+model Hotel {
+  id          String @id @default(cuid())
+  name        String
+  description String
+  address     String
+  city        String
+  country     String
+  imageUrl    String?
+  rating      Float   @default(0)
+  
+  rooms Room[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("hotels")
+}
+
+model Room {
+  id          String  @id @default(cuid())
+  hotelId     String
+  name        String
+  description String
+  type        String
+  price       Float
+  capacity    Int
+  imageUrl    String?
+  amenities   String[]
+  
+  hotel    Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("rooms")
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  userId        String
+  roomId        String
+  checkIn       DateTime
+  checkOut      DateTime
+  guests        Int
+  totalAmount   Float
+  status        BookingStatus @default(PENDING)
+  paymentUrl    String?
+  xenditInvoiceId String?
+  
+  user User @relation(fields: [userId], references: [id])
+  room Room @relation(fields: [roomId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("bookings")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
