@@ -4,7 +4,7 @@ export const hotelResolvers = {
   Query: {
     hotels: async (_: any, { city }: any, { prisma }: Context) => {
       const where = city ? { city: { contains: city, mode: 'insensitive' as any } } : {};
-      
+
       const hotels = await prisma.hotel.findMany({
         where,
         include: {
@@ -71,6 +71,80 @@ export const hotelResolvers = {
         createdAt: hotel.createdAt.toISOString(),
         rooms: []
       };
+    },
+
+    updateHotel: async (_: any, args: any, { prisma, user }: Context) => {
+      if (!user || user.role !== 'ADMIN') {
+        throw new Error('Admin access required');
+      }
+
+      const { id, ...updateData } = args;
+
+      const hotel = await prisma.hotel.update({
+        where: { id },
+        data: updateData,
+        include: {
+          rooms: true
+        }
+      });
+
+      return {
+        ...hotel,
+        createdAt: hotel.createdAt.toISOString(),
+        rooms: hotel.rooms.map(room => ({
+          ...room,
+          createdAt: room.createdAt.toISOString()
+        }))
+      };
+    },
+
+    deleteHotel: async (_: any, { id }: any, { prisma, user }: Context) => {
+      if (!user || user.role !== 'ADMIN') {
+        throw new Error('Admin access required');
+      }
+
+      await prisma.hotel.delete({
+        where: { id }
+      });
+
+      return true;
+    },
+
+    updateRoom: async (_: any, args: any, { prisma, user }: Context) => {
+      if (!user || user.role !== 'ADMIN') {
+        throw new Error('Admin access required');
+      }
+
+      const { id, ...updateData } = args;
+
+      const room = await prisma.room.update({
+        where: { id },
+        data: updateData,
+        include: {
+          hotel: true
+        }
+      });
+
+      return {
+        ...room,
+        createdAt: room.createdAt.toISOString(),
+        hotel: {
+          ...room.hotel,
+          createdAt: room.hotel.createdAt.toISOString()
+        }
+      };
+    },
+
+    deleteRoom: async (_: any, { id }: any, { prisma, user }: Context) => {
+      if (!user || user.role !== 'ADMIN') {
+        throw new Error('Admin access required');
+      }
+
+      await prisma.room.delete({
+        where: { id }
+      });
+
+      return true;
     },
 
     createRoom: async (_: any, args: any, { prisma, user }: Context) => {

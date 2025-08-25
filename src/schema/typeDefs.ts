@@ -95,6 +95,31 @@ export const typeDefs = /* GraphQL */ `
       amenities: [String!]!
     ): Room!
     
+    updateHotel(
+      id: ID!
+      name: String
+      description: String
+      address: String
+      city: String
+      country: String
+      imageUrl: String
+    ): Hotel!
+    
+    deleteHotel(id: ID!): Boolean!
+    
+    updateRoom(
+      id: ID!
+      name: String
+      description: String
+      type: String
+      price: Float
+      capacity: Int
+      imageUrl: String
+      amenities: [String!]
+    ): Room!
+    
+    deleteRoom(id: ID!): Boolean!
+    
     createBooking(
       roomId: ID!
       checkIn: String!

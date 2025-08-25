@@ -8,15 +8,61 @@ import { typeDefs } from './schema/typeDefs.js';
 import { resolvers } from './resolvers/index.js';
 import { getUser } from './middleware/auth.js';
 import { verifyXenditWebhook } from './services/xendit.js';
+import { initializeBucket, uploadImage } from './services/minio.js';
+import multer from 'multer';
 
 const app = new Hono();
 const prisma = new PrismaClient();
+
+// Initialize MinIO bucket
+initializeBucket();
+
+// Configure multer for file uploads
+multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req: any, file: any, cb: any) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // CORS middleware
 app.use('*', cors({
   origin: [process.env.FRONTEND_URL || 'http://localhost:5173'],
   credentials: true
 }));
+
+app.post('/upload', async (c) => {
+  try {
+    const authorization = c.req.header('authorization');
+    const user = getUser(authorization || undefined);
+
+    if (!user || user.role !== 'ADMIN') {
+      return c.json({ error: 'Admin access required' }, 403);
+    }
+
+    const formData = await c.req.formData();
+    const file = formData.get('image') as File;
+
+    if (!file) {
+      return c.json({ error: 'No file provided' }, 400);
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const imageUrl = await uploadImage(buffer, file.name, file.type);
+
+    return c.json({ imageUrl });
+  } catch (error: any) {
+    console.error('Upload error:', error);
+    return c.json({ error: error.message || 'Upload failed' }, 500);
+  }
+});
 
 // Create executable schema
 const schema = makeExecutableSchema({
